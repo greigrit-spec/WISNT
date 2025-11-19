@@ -264,8 +264,8 @@ goto menu
 :: Сначала очищаем экран в CMD, чтобы PS начал писать с самого верха
 cls
 echo.
-echo  %cYellow%[ BUSY ]%cReset% Загрузка данных (SSD, TPM, System)...
-echo  %cGray%Пожалуйста, подождите...%cReset%
+echo  %cYellow%[ BUSY ]%cReset% Загрузка данных (SSD, TPM, System)...
+echo  %cGray%Пожалуйста, подождите...%cReset%
 echo.
 
 set "ps_file=%TEMP%\sys_info_gen.ps1"
@@ -276,7 +276,8 @@ setlocal DisableDelayedExpansion
 
 echo $ProgressPreference = 'SilentlyContinue' >> "%ps_file%"
 echo $ErrorActionPreference = 'SilentlyContinue' >> "%ps_file%"
-:: Убрали Clear-Host изнутри, полагаемся на CLS батника, чтобы не мигало
+:: В PS-скрипт добавлена пустая строка для дополнительного отступа
+echo Write-Host "" >> "%ps_file%"
 
 :: 1. WINDOWS & UPTIME
 echo Write-Host " [OPERATING SYSTEM]" -ForegroundColor Cyan >> "%ps_file%"
@@ -323,16 +324,20 @@ echo Get-CimInstance Win32_NetworkAdapterConfiguration ^| Where-Object {$_.IPEna
 endlocal
 :: --- КОНЕЦ ГЕНЕРАЦИИ ---
 
-:: Чистим экран ПЕРЕД выводом, чтобы первая строка была в самом верху
-cls
+:: ИСПРАВЛЕНИЕ: Убираем команду cls и заменяем ее на echo.
+:: Это затирает текст "BUSY" и сдвигает курсор, не вызывая прокрутки окна.
+echo.
+echo.
+echo.
+echo.
 powershell -NoProfile -ExecutionPolicy Bypass -File "%ps_file%"
 
 :: Очистка временного файла
 del "%ps_file%" >nul 2>&1
 
 echo.
-echo  %cCyan%===========================================================================%cReset%
-echo  %cGray%Нажмите любую клавишу, чтобы вернуться в меню...%cReset%
+echo  %cCyan%===========================================================================%cReset%
+echo  %cGray%Нажмите любую клавишу, чтобы вернуться в меню...%cReset%
 pause >nul
 
 :: Восстановление окна
@@ -392,6 +397,7 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
 
