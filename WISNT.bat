@@ -352,41 +352,96 @@ pause >nul
 mode con cols=120 lines=62 >nul 2>&1
 goto menu
 
-:: --- НОВАЯ ФУНКЦИЯ ---
+:: --- ОБНОВЛЁННАЯ ФУНКЦИЯ ---
 :disable_telemetry
 cls
 echo.
 echo  %cCyan%--- ОТКЛЮЧЕНИЕ ТЕЛЕМЕТРИИ WINDOWS (EXLOUD) ---%cReset%
 echo.
-echo  %cYellow%[ INFO ]%cReset% Загрузка и запуск скрипта отключения телеметрии...
+echo  %cYellow%[ INFO ]%cReset% Загрузка архива репозитория...
 echo  %cGray%Источник: https://github.com/EXLOUD/Windows-Telemetry-Disabler%cReset%
 echo.
-:: Временный файл для скрипта
-set "telemetry_script=%TEMP%\telemetry_launcher_%RANDOM%.bat"
 
-:: Скачивание скрипта с GitHub
-powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/EXLOUD/Windows-Telemetry-Disabler/refs/heads/main/Launcher.bat', '%telemetry_script%')"
+:: Генерация уникальных имён для временных файлов/папок
+set "zip_url=https://github.com/EXLOUD/Windows-Telemetry-Disabler/archive/refs/heads/main.zip"
+set "zip_file=%TEMP%\telemetry_disabler_repo_%RANDOM%.zip"
+set "extract_dir=%TEMP%\telemetry_disabler_extract_%RANDOM%"
+
+:: Скачивание ZIP-архива
+powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object Net.WebClient).DownloadFile('%zip_url%', '%zip_file%')"
 
 :: Проверка, скачался ли файл
-if not exist "%telemetry_script%" (
+if not exist "%zip_file%" (
     echo.
-    echo  %cRed%[ ERROR ] Ошибка загрузки скрипта телеметрии!%cReset%
+    echo  %cRed%[ ERROR ] Ошибка загрузки архива репозитория!%cReset%
     echo  Проверьте интернет или доступность GitHub.
     pause
     goto menu
 )
 
-echo  %cYellow%[ INFO ]%cReset% Скрипт успешно загружен.
-echo  %cYellow%[ INFO ]%cReset% Запуск скрипта через TrustedInstaller (superUser)...
+echo  %cYellow%[ INFO ]%cReset% Архив успешно загружен.
+
+:: Проверка наличия PowerShell для распаковки
+if not defined PS_EXE (
+    for %%X in (powershell.exe) do (set "PS_EXE=%%~$PATH:X)
+)
+if not defined PS_EXE (
+    echo  %cRed%[ ERROR ] PowerShell не найден в PATH!%cReset%
+    pause
+    goto menu
+)
+
+:: Распаковка ZIP-архива во временный каталог
+echo  %cYellow%[ INFO ]%cReset% Распаковка архива...
+"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path '%zip_file%' -DestinationPath '%extract_dir%' -Force"
+
+:: Проверка, создалась ли папка после распаковки
+if not exist "%extract_dir%" (
+    echo  %cRed%[ ERROR ] Ошибка распаковки архива!%cReset%
+    if exist "%zip_file%" del /f /q "%zip_file%" >nul 2>&1
+    pause
+    goto menu
+)
+
+:: Определение реальной папки репозитория (обычно это Windows-Telemetry-Disabler-main)
+set "repo_dir="
+for /d %%i in ("%extract_dir%\*") do (
+    if not defined repo_dir set "repo_dir=%%i"
+)
+
+if not defined repo_dir (
+    echo  %cRed%[ ERROR ] Не найдена папка репозитория после распаковки.%cReset%
+    if exist "%zip_file%" del /f /q "%zip_file%" >nul 2>&1
+    if exist "%extract_dir%" rmdir /s /q "%extract_dir%" >nul 2>&1
+    pause
+    goto menu
+)
+
+:: Путь к Launcher.bat внутри распакованного репозитория
+set "launcher_path=%repo_dir%\launcher.bat"
+
+:: Проверка, существует ли Launcher.bat
+if not exist "%launcher_path%" (
+    echo  %cRed%[ ERROR ] Launcher.bat не найден в распакованном архиве!%cReset%
+    if exist "%zip_file%" del /f /q "%zip_file%" >nul 2>&1
+    if exist "%extract_dir%" rmdir /s /q "%extract_dir%" >nul 2>&1
+    pause
+    goto menu
+)
+
+echo  %cYellow%[ INFO ]%cReset% Запуск Launcher.bat через TrustedInstaller (superUser)...
 echo  %cGray%Это может занять некоторое время...%cReset%
 echo.
-:: Запуск скачанного скрипта
-call "%telemetry_script%"
+:: Запуск Launcher.bat из распакованной папки
+call "%launcher_path%"
 
-:: Удаление временного файла после выполнения
-if exist "%telemetry_script%" (
-    del /f /q "%telemetry_script%" >nul 2>&1
-    echo  %cGreen%[ INFO ]%cReset% Временный файл удален.
+:: Удаление временных файлов после выполнения
+echo  %cYellow%[ INFO ]%cReset% Очистка временных файлов...
+if exist "%zip_file%" (
+    del /f /q "%zip_file%" >nul 2>&1
+)
+if exist "%extract_dir%" (
+    rmdir /s /q "%extract_dir%" >nul 2>&1
 )
 
 echo.
