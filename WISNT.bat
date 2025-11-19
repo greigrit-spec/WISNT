@@ -256,17 +256,16 @@ powershell -command "Get-PnpDevice -Class Display | Disable-PnpDevice -Confirm:$
 echo  %cGreen%[ OK ]%cReset% Готово.
 timeout /t 2 >nul
 goto menu
-
 :: ==============================================
-:: [14] СВОДКА О ЖЕЛЕЗЕ (ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ v2)
+:: [14] СВОДКА О ЖЕЛЕЗЕ (ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ v2) - ИСПРАВЛЕНО
 :: ==============================================
 :sys_info_safe
-:: Очистка экрана, чтобы вывод начался с самого верха
 cls
-echo.
-echo  %cYellow%[ BUSY ]%cReset% Загрузка данных (SSD, TPM, System)...
-echo  %cGray%Пожалуйста, подождите...%cReset%
-echo.
+:: Убираем echo здесь, так как PowerShell сам покажет сообщение
+:: echo.
+:: echo  %cYellow%[ BUSY ]%cReset% Загрузка данных (SSD, TPM, System)...
+:: echo  %cGray%Пожалуйста, подождите...%cReset%
+:: echo.
 
 set "ps_file=%TEMP%\sys_info_gen.ps1"
 if exist "%ps_file%" del "%ps_file%"
@@ -277,11 +276,13 @@ setlocal DisableDelayedExpansion
 echo $ProgressPreference = 'SilentlyContinue' >> "%ps_file%"
 echo $ErrorActionPreference = 'SilentlyContinue' >> "%ps_file%"
 
-:: ГАРАНТИРОВАННЫЙ ОТСТУП: Выводим 6 пустых строк, чтобы создать буфер.
+:: ПОКАЗ СООБЩЕНИЯ ВНУТРИ POWERSHELL
 echo Write-Host "" >> "%ps_file%"
+echo Write-Host " [ BUSY ] Загрузка данных (SSD, TPM, System)..." -ForegroundColor Yellow >> "%ps_file%"
+echo Write-Host " Пожалуйста, подождите..." -ForegroundColor Gray >> "%ps_file%"
 echo Write-Host "" >> "%ps_file%"
-echo Write-Host "" >> "%ps_file%"
-echo Write-Host "" >> "%ps_file%"
+
+:: ГАРАНТИРОВАННЫЙ ОТСТУП: Выводим 2 пустые строки после сообщения
 echo Write-Host "" >> "%ps_file%"
 echo Write-Host "" >> "%ps_file%"
 
@@ -331,15 +332,15 @@ endlocal
 :: --- КОНЕЦ ГЕНЕРАЦИИ ---
 
 :: ЗАПУСК:
-:: Мы полагаемся на то, что PS выведет 6 пустых строк.
+:: Теперь PowerShell сначала покажет сообщение о загрузке.
 powershell -NoProfile -ExecutionPolicy Bypass -File "%ps_file%"
 
 :: Очистка временного файла
 del "%ps_file%" >nul 2>&1
 
 echo.
-echo  %cCyan%===========================================================================%cReset%
-echo  %cGray%Нажмите любую клавишу, чтобы вернуться в меню...%cReset%
+echo  %cCyan%===========================================================================%cReset%
+echo  %cGray%Нажмите любую клавишу, чтобы вернуться в меню...%cReset%
 pause >nul
 
 :: Восстановление окна
@@ -398,6 +399,7 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
 
