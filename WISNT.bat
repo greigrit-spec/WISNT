@@ -258,10 +258,10 @@ timeout /t 2 >nul
 goto menu
 
 :: ==============================================
-:: [14] СВОДКА О ЖЕЛЕЗЕ (ИСПРАВЛЕНО ОТОБРАЖЕНИЕ)
+:: [14] СВОДКА О ЖЕЛЕЗЕ (ФИНАЛЬНАЯ ВЕРСИЯ)
 :: ==============================================
 :sys_info_safe
-:: Сначала очищаем экран в CMD, чтобы PS начал писать с самого верха
+:: Очищаем экран и выводим статус BUSY
 cls
 echo.
 echo  %cYellow%[ BUSY ]%cReset% Загрузка данных (SSD, TPM, System)...
@@ -276,7 +276,9 @@ setlocal DisableDelayedExpansion
 
 echo $ProgressPreference = 'SilentlyContinue' >> "%ps_file%"
 echo $ErrorActionPreference = 'SilentlyContinue' >> "%ps_file%"
-:: В PS-скрипт добавлена пустая строка для дополнительного отступа
+
+:: ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ: PowerShell сам очищает экран перед выводом.
+echo Clear-Host >> "%ps_file%"
 echo Write-Host "" >> "%ps_file%"
 
 :: 1. WINDOWS & UPTIME
@@ -324,12 +326,7 @@ echo Get-CimInstance Win32_NetworkAdapterConfiguration ^| Where-Object {$_.IPEna
 endlocal
 :: --- КОНЕЦ ГЕНЕРАЦИИ ---
 
-:: ИСПРАВЛЕНИЕ: Убираем команду cls и заменяем ее на echo.
-:: Это затирает текст "BUSY" и сдвигает курсор, не вызывая прокрутки окна.
-echo.
-echo.
-echo.
-echo.
+:: ЗАПУСК: Выводим [BUSY], а PowerShell внутри себя очищает экран.
 powershell -NoProfile -ExecutionPolicy Bypass -File "%ps_file%"
 
 :: Очистка временного файла
@@ -397,6 +394,7 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
 
