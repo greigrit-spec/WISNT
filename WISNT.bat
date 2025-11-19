@@ -258,13 +258,11 @@ timeout /t 2 >nul
 goto menu
 
 :: ==============================================
-:: [14] СВОДКА О ЖЕЛЕЗЕ (ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ)
+:: [14] СВОДКА О ЖЕЛЕЗЕ (ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ v2)
 :: ==============================================
 :sys_info_safe
-:: Сначала очищаем экран в CMD, чтобы PS начал писать с самого верха
+:: Очистка экрана, чтобы вывод начался с самого верха
 cls
-echo.
-echo.
 echo.
 echo  %cYellow%[ BUSY ]%cReset% Загрузка данных (SSD, TPM, System)...
 echo  %cGray%Пожалуйста, подождите...%cReset%
@@ -279,7 +277,13 @@ setlocal DisableDelayedExpansion
 echo $ProgressPreference = 'SilentlyContinue' >> "%ps_file%"
 echo $ErrorActionPreference = 'SilentlyContinue' >> "%ps_file%"
 
-:: УДАЛЕНО: Clear-Host и Write-Host "" - Отступы контролируются BAT-файлом.
+:: ГАРАНТИРОВАННЫЙ ОТСТУП: Выводим 6 пустых строк, чтобы создать буфер.
+echo Write-Host "" >> "%ps_file%"
+echo Write-Host "" >> "%ps_file%"
+echo Write-Host "" >> "%ps_file%"
+echo Write-Host "" >> "%ps_file%"
+echo Write-Host "" >> "%ps_file%"
+echo Write-Host "" >> "%ps_file%"
 
 :: 1. WINDOWS & UPTIME
 echo Write-Host " [OPERATING SYSTEM]" -ForegroundColor Cyan >> "%ps_file%"
@@ -327,8 +331,7 @@ endlocal
 :: --- КОНЕЦ ГЕНЕРАЦИИ ---
 
 :: ЗАПУСК:
-:: Мы вводим три пустые строки в BAT-файле (echo. x 3)
-:: PowerShell запускается и не выводит пустых строк, сразу начиная с заголовка.
+:: Мы полагаемся на то, что PS выведет 6 пустых строк.
 powershell -NoProfile -ExecutionPolicy Bypass -File "%ps_file%"
 
 :: Очистка временного файла
@@ -395,6 +398,7 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
 
