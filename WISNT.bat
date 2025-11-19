@@ -381,23 +381,19 @@ if not exist "%zip_file%" (
 
 echo  %cYellow%[ INFO ]%cReset% Архив успешно загружен.
 
-:: Проверка наличия PowerShell для распаковки
-if not defined PS_EXE (
-    for %%X in (powershell.exe) do (set "PS_EXE=%%~$PATH:X)
-)
-if not defined PS_EXE (
-    echo  %cRed%[ ERROR ] PowerShell не найден в PATH!%cReset%
-    pause
-    goto menu
-)
-
-:: --- ИСПРАВЛЕНИЕ ---
-:: Создаём директорию для распаковки
+:: --- ИСПРАВЛЕНИЕ: Используем встроенный tar.exe для распаковки ---
+echo  %cYellow%[ INFO ]%cReset% Распаковка архива (используя tar.exe)...
 if not exist "%extract_dir%" mkdir "%extract_dir%"
 
-:: Теперь используем Expand-Archive с экранированными кавычками
-echo  %cYellow%[ INFO ]%cReset% Распаковка архива...
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path ('%zip_file%') -DestinationPath ('%extract_dir%') -Force"
+:: Переходим во временную папку, чтобы распаковать туда
+pushd "%extract_dir%"
+
+:: Запускаем tar.exe для распаковки ZIP-архива
+tar.exe -xf "%zip_file%"
+
+:: Возвращаемся обратно
+popd
+:: --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
 :: Проверка, создалась ли папка после распаковки
 if not exist "%extract_dir%" (
@@ -406,7 +402,6 @@ if not exist "%extract_dir%" (
     pause
     goto menu
 )
-:: --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
 :: Определение реальной папки репозитория (обычно это Windows-Telemetry-Disabler-main)
 set "repo_dir="
@@ -509,3 +504,4 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
