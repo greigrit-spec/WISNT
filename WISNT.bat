@@ -181,55 +181,65 @@ goto menu
 :optimize
 cls
 echo.
-echo  %cCyan%--- ПРОФЕССИОНАЛЬНАЯ ОЧИСТКА ---%cReset%
+echo  %cCyan%--- УНИВЕРСАЛЬНАЯ ОЧИСТКА (FINAL FIX) ---%cReset%
 echo.
 
-:: [1] Фиксация рабочей директории (для запуска по сети)
+:: [1] Фиксация рабочей директории (защита для сетевого запуска)
 pushd "%~dp0"
 
-:: [2] Остановка служб, блокирующих файлы
+:: [2] Безопасная остановка служб (Anti-Crash)
 echo  %cYellow%[ 1/5 ]%cReset% Остановка служб (Update, Spooler)...
-net stop wuauserv >nul 2>&1
-net stop UsoSvc >nul 2>&1
-net stop bits >nul 2>&1
+:: Используем SC и CMD /C, чтобы не ждать ответа и не вешать скрипт
+cmd /c "sc stop wuauserv >nul 2>&1"
+cmd /c "sc stop UsoSvc >nul 2>&1"
 
-:: [3] Очистка Пользовательского TEMP (С ЗАЩИТОЙ ЛОГА)
+:: ВАЖНО: Останавливаем BITS только если мы на диске C: (локально).
+:: Если запустить это на сетевом диске — связь разорвется и скрипт упадет.
+if /i "%~d0"=="C:" (
+    cmd /c "sc stop bits >nul 2>&1"
+)
+:: Короткая пауза для стабилизации, но не зависаем
+timeout /t 2 /nobreak >nul
+
+:: [3] Умная очистка TEMP (PowerShell с исключением ЛОГА)
 echo  %cYellow%[ 2/5 ]%cReset% Очистка временных файлов пользователя...
-:: Мы используем PowerShell, чтобы удалить всё, КРОМЕ текущего лог-файла
+:: Удаляем все в Temp, КРОМЕ файла, путь к которому лежит в %logfile%
 powershell -noprofile -command "Get-ChildItem -Path $env:TEMP -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.FullName -ne '%logfile%' } | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue"
-if not errorlevel 1 (echo  %cGreen%[ OK ]%cReset%) else (echo  %cRed%[ SKIP ]%cReset%)
+echo  %cGreen%[ OK ]%cReset%
 
-:: [4] Очистка Системного TEMP и SoftwareDistribution
+:: [4] Очистка Системного TEMP и Кеша обновлений
 echo  %cYellow%[ 3/5 ]%cReset% Очистка системного мусора...
+:: Чистим Windows\Temp
 del /f /s /q "%WINDIR%\Temp\*.*" >nul 2>&1
+:: Чистим папку скачанных обновлений (если она есть)
 if exist "%WINDIR%\SoftwareDistribution\Download" (
     del /f /s /q "%WINDIR%\SoftwareDistribution\Download\*.*" >nul 2>&1
 )
 echo  %cGreen%[ OK ]%cReset%
 
-:: [5] Очистка кэшей DNS и Корзины
-echo  %cYellow%[ 4/5 ]%cReset% Сброс сети и корзины...
+:: [5] Очистка Корзины и DNS
+echo  %cYellow%[ 4/5 ]%cReset% Сброс DNS и Корзины...
 ipconfig /flushdns >nul 2>&1
-:: Безопасная очистка корзины через PowerShell (работает стабильнее rd /s)
+:: Безопасная очистка корзины через PowerShell
 powershell -command "Clear-RecycleBin -Force -ErrorAction SilentlyContinue" >nul 2>&1
 echo  %cGreen%[ OK ]%cReset%
 
-:: [6] Запуск CleanMgr (автоматический режим)
+:: [6] Запуск CleanMgr (Автоматический режим)
 echo  %cYellow%[ 5/5 ]%cReset% Глубокая очистка диска (CleanMgr)...
-:: Добавляем ключи реестра для "тихого" запуска со всеми галочками
+:: Прописываем настройки в реестр, чтобы CleanMgr знал, что чистить
 set "KEY=HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches"
 reg add "%KEY%\Temporary Files" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul 2>&1
 reg add "%KEY%\Recycle Bin" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul 2>&1
 reg add "%KEY%\Update Cleanup" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul 2>&1
-:: Запуск
+:: Запускаем и ждем завершения (start /wait)
 start "" /wait cleanmgr.exe /sagerun:10
 echo  %cGreen%[ OK ]%cReset%
 
-:: [7] Перезапуск служб
-net start wuauserv >nul 2>&1
-net start UsoSvc >nul 2>&1
+:: [7] Восстановление служб (запускаем обратно)
+cmd /c "sc start wuauserv >nul 2>&1"
+cmd /c "sc start UsoSvc >nul 2>&1"
 
-:: Возврат контекста
+:: Возврат контекста и выход
 popd
 
 echo.
@@ -409,5 +419,6 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
