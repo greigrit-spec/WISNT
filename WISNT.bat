@@ -71,12 +71,15 @@ echo   %cCyan%[16]%cReset% В BIOS                              %cCyan%[18]%cRes
 echo.
 echo   %cGray%:: ПРОЧЕЕ ::%cReset%
 echo   %cCyan%[19]%cReset% Полезные ссылки                     %cCyan%[20]%cReset% Активация (MAS)
+:: --- НОВЫЙ ПУНКТ МЕНЮ ---
+echo   %cCyan%[21]%cReset% Отключить телеметрию Windows (EXLOUD)
+:: ---
 echo.
 echo   %cRed%[0]  ВЫХОД%cReset%
 echo.
 echo  %cCyan%=================================================================================================%cReset%
 set "selected_option="
-set /p "selected_option= %cYellow%>>> Ваш выбор [0-20]: %cReset%"
+set /p "selected_option= %cYellow%>>> Ваш выбор [0-21]: %cReset%"
 
 if not defined selected_option goto menu
 echo [LOG] Choice: !selected_option! >> "%logfile%"
@@ -102,7 +105,9 @@ if "!selected_option!"=="17" goto restart_safe
 if "!selected_option!"=="18" goto reset_safe
 if "!selected_option!"=="19" goto open_links
 if "!selected_option!"=="20" goto activate
-
+:: --- НОВОЕ УСЛОВИЕ ---
+if "!selected_option!"=="21" goto disable_telemetry
+:: ---
 echo.
 echo  %cRed%[ ERROR ] Неверный ввод!%cReset%
 timeout /t 1 >nul
@@ -185,7 +190,7 @@ echo  %cCyan%--- ОНЛАЙН ОЧИСТКА (NETRAVAA) ---%cReset%
 echo.
 
 :: [1] Задаем переменные
-set "target_url=https://raw.githubusercontent.com/netravaa/bat_for_clear/main/Очистка.bat"
+set "target_url=https://raw.githubusercontent.com/netravaa/bat_for_clear/main/  Очистка.bat"
 set "temp_runner=%TEMP%\netravaa_cleaner.bat"
 
 :: [2] Скачивание
@@ -346,6 +351,51 @@ pause >nul
 :: Восстановление окна
 mode con cols=120 lines=62 >nul 2>&1
 goto menu
+
+:: --- НОВАЯ ФУНКЦИЯ ---
+:disable_telemetry
+cls
+echo.
+echo  %cCyan%--- ОТКЛЮЧЕНИЕ ТЕЛЕМЕТРИИ WINDOWS (EXLOUD) ---%cReset%
+echo.
+echo  %cYellow%[ INFO ]%cReset% Загрузка и запуск скрипта отключения телеметрии...
+echo  %cGray%Источник: https://github.com/EXLOUD/Windows-Telemetry-Disabler%cReset%
+echo.
+:: Временный файл для скрипта
+set "telemetry_script=%TEMP%\telemetry_launcher_%RANDOM%.bat"
+
+:: Скачивание скрипта с GitHub
+powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/EXLOUD/Windows-Telemetry-Disabler/refs/heads/main/Launcher.bat', '%telemetry_script%')"
+
+:: Проверка, скачался ли файл
+if not exist "%telemetry_script%" (
+    echo.
+    echo  %cRed%[ ERROR ] Ошибка загрузки скрипта телеметрии!%cReset%
+    echo  Проверьте интернет или доступность GitHub.
+    pause
+    goto menu
+)
+
+echo  %cYellow%[ INFO ]%cReset% Скрипт успешно загружен.
+echo  %cYellow%[ INFO ]%cReset% Запуск скрипта через TrustedInstaller (superUser)...
+echo  %cGray%Это может занять некоторое время...%cReset%
+echo.
+:: Запуск скачанного скрипта
+call "%telemetry_script%"
+
+:: Удаление временного файла после выполнения
+if exist "%telemetry_script%" (
+    del /f /q "%telemetry_script%" >nul 2>&1
+    echo  %cGreen%[ INFO ]%cReset% Временный файл удален.
+)
+
+echo.
+echo  %cGreen%[ DONE ]%cReset% Процесс отключения телеметрии завершен.
+echo  %cGray%Нажмите любую клавишу для возврата в меню...%cReset%
+pause >nul
+goto menu
+:: ---
+
 :: ==============================================
 :: КОМАНДЫ ПИТАНИЯ И ССЫЛКИ
 :: ==============================================
@@ -392,30 +442,10 @@ goto menu
 cls
 echo.
 echo  %cYellow%[ INFO ]%cReset% Запуск MAS (Microsoft Activation Scripts)...
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://get.activated.win | iex"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm https://get.activated.win   | iex"
 echo.
 echo  %cGreen%[ DONE ]%cReset% Активатор завершил работу.
 echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
