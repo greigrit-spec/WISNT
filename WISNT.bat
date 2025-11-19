@@ -258,11 +258,13 @@ timeout /t 2 >nul
 goto menu
 
 :: ==============================================
-:: [14] СВОДКА О ЖЕЛЕЗЕ (ФИНАЛЬНАЯ ВЕРСИЯ)
+:: [14] СВОДКА О ЖЕЛЕЗЕ (ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ)
 :: ==============================================
 :sys_info_safe
-:: Очищаем экран и выводим статус BUSY
+:: Сначала очищаем экран в CMD, чтобы PS начал писать с самого верха
 cls
+echo.
+echo.
 echo.
 echo  %cYellow%[ BUSY ]%cReset% Загрузка данных (SSD, TPM, System)...
 echo  %cGray%Пожалуйста, подождите...%cReset%
@@ -277,11 +279,7 @@ setlocal DisableDelayedExpansion
 echo $ProgressPreference = 'SilentlyContinue' >> "%ps_file%"
 echo $ErrorActionPreference = 'SilentlyContinue' >> "%ps_file%"
 
-:: ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ: PowerShell сам очищает экран перед выводом.
-echo Clear-Host >> "%ps_file%"
-echo Write-Host "" >> "%ps_file%"
-echo Write-Host "" >> "%ps_file%"
-echo Write-Host "" >> "%ps_file%"
+:: УДАЛЕНО: Clear-Host и Write-Host "" - Отступы контролируются BAT-файлом.
 
 :: 1. WINDOWS & UPTIME
 echo Write-Host " [OPERATING SYSTEM]" -ForegroundColor Cyan >> "%ps_file%"
@@ -328,7 +326,9 @@ echo Get-CimInstance Win32_NetworkAdapterConfiguration ^| Where-Object {$_.IPEna
 endlocal
 :: --- КОНЕЦ ГЕНЕРАЦИИ ---
 
-:: ЗАПУСК: Выводим [BUSY], а PowerShell внутри себя очищает экран.
+:: ЗАПУСК:
+:: Мы вводим три пустые строки в BAT-файле (echo. x 3)
+:: PowerShell запускается и не выводит пустых строк, сразу начиная с заголовка.
 powershell -NoProfile -ExecutionPolicy Bypass -File "%ps_file%"
 
 :: Очистка временного файла
@@ -342,7 +342,6 @@ pause >nul
 :: Восстановление окна
 mode con cols=120 lines=62 >nul 2>&1
 goto menu
-
 :: ==============================================
 :: КОМАНДЫ ПИТАНИЯ И ССЫЛКИ
 :: ==============================================
@@ -396,6 +395,7 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
 
