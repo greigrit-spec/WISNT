@@ -181,49 +181,60 @@ goto menu
 :optimize
 cls
 echo.
-echo  %cCyan%--- БЕЗОПАСНАЯ ОЧИСТКА (NETWORK SAFE) ---%cReset%
+echo  %cCyan%--- SYSTEM CLEANUP (LOCAL AGENT MODE) ---%cReset%
 echo.
 
-:: [1] Фиксация рабочей директории
-pushd "%~dp0"
+:: ============================================================
+:: STEP 1: GENERATE LOCAL WORKER SCRIPT
+:: We create a temporary batch file on C: to avoid network crashes
+:: ============================================================
+set "worker=%TEMP%\clean_worker_%RANDOM%.bat"
 
-:: [2] Настройка CleanMgr (Пусть Windows сама разбирается со службами)
-echo  %cYellow%[ 1/3 ]%cReset% Настройка параметров очистки...
-set "KEY=HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches"
+echo  %cYellow%[ 1/3 ]%cReset% Preparing local cleanup agent...
 
-:: Включаем галочки в реестре
-reg add "%KEY%\Temporary Files" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul 2>&1
-reg add "%KEY%\Recycle Bin" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul 2>&1
-reg add "%KEY%\Update Cleanup" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul 2>&1
-reg add "%KEY%\Delivery Optimization Files" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul 2>&1
-echo  %cGreen%[ OK ]%cReset%
+(
+    echo @echo off
+    echo chcp 65001 ^>nul
+    echo title System Cleanup Worker
+    echo.
+    echo :: 1. Configure CleanMgr Registry
+    echo reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Temporary Files" /v StateFlags0010 /t REG_DWORD /d 2 /f ^>nul
+    echo reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Recycle Bin" /v StateFlags0010 /t REG_DWORD /d 2 /f ^>nul
+    echo reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Update Cleanup" /v StateFlags0010 /t REG_DWORD /d 2 /f ^>nul
+    echo.
+    echo :: 2. Safe Temp Cleanup via PowerShell ^(Excluding Log^)
+    echo powershell -noprofile -command "Get-ChildItem -Path $env:TEMP -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.FullName -ne '%logfile%' } | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue"
+    echo.
+    echo :: 3. System Temp Cleanup
+    echo powershell -noprofile -command "Get-ChildItem -Path $env:WINDIR\Temp -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue"
+    echo.
+    echo :: 4. Flush DNS
+    echo ipconfig /flushdns ^>nul
+    echo.
+    echo :: 5. Run CleanMgr
+    echo cleanmgr.exe /sagerun:10
+    echo.
+    echo exit
+) > "%worker%"
 
-:: [3] Очистка пользовательского мусора (PowerShell - Safe Mode)
-echo  %cYellow%[ 2/3 ]%cReset% Очистка временных файлов...
+:: ============================================================
+:: STEP 2: EXECUTE LOCAL WORKER
+:: Now we run the script from C: drive. Network glitches won't kill it.
+:: ============================================================
+echo  %cYellow%[ 2/3 ]%cReset% Running cleanup process...
+echo  %cGray%   (A separate window will open for cleanup)%cReset%
 
-:: Чистим пользовательский Temp, пропуская занятые файлы и лог
-powershell -noprofile -command "Get-ChildItem -Path $env:TEMP -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.FullName -ne '%logfile%' } | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue"
+:: Start the worker and wait for it to finish
+start /wait "" "%worker%"
 
-:: Чистим системный Temp (без фанатизма, только то, что удаляется)
-powershell -noprofile -command "Get-ChildItem -Path $env:WINDIR\Temp -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue"
-
-:: Очистка DNS
-ipconfig /flushdns >nul 2>&1
-echo  %cGreen%[ OK ]%cReset%
-
-:: [4] Запуск системной очистки (CleanMgr)
-echo  %cYellow%[ 3/3 ]%cReset% Глубокая очистка (CleanMgr)...
-echo  %cGray%Это может занять время. Пожалуйста, ждите...%cReset%
-
-:: Запускаем CleanMgr и ЖДЕМ его завершения. Он сам почистит обновления.
-start "" /wait cleanmgr.exe /sagerun:10
-echo  %cGreen%[ OK ]%cReset%
-
-:: Возврат контекста
-popd
+:: ============================================================
+:: STEP 3: FINISH
+:: ============================================================
+echo  %cYellow%[ 3/3 ]%cReset% Cleaning up worker traces...
+if exist "%worker%" del /f /q "%worker%" >nul 2>&1
 
 echo.
-echo  %cGreen%[ DONE ]%cReset% Система очищена.
+echo  %cGreen%[ DONE ]%cReset% Cleanup finished successfully.
 echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 goto menu
@@ -399,6 +410,7 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
 
