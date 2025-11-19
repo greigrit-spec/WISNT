@@ -282,9 +282,7 @@ echo Clear-Host >> "%ps_file%"
 echo Write-Host "" >> "%ps_file%"
 
 :: 1. WINDOWS & UPTIME
-echo
-echo
-echo
+
 echo Write-Host " [OPERATING SYSTEM]" -ForegroundColor Cyan >> "%ps_file%"
 echo $os = Get-CimInstance Win32_OperatingSystem >> "%ps_file%"
 echo $uptime = (Get-Date) - $os.LastBootUpTime >> "%ps_file%"
@@ -292,7 +290,6 @@ echo $uptimeStr = "{0}d {1}h {2}m" -f $uptime.Days, $uptime.Hours, $uptime.Minut
 echo $secBoot = try { if (Confirm-SecureBootUEFI) {'Enabled'} else {'Disabled'} } catch {'Legacy/Unknown'} >> "%ps_file%"
 echo $tpm = try { $t = Get-Tpm; if($t.TpmPresent){'v2.0'}else{'None'} } catch {'Unknown'} >> "%ps_file%"
 echo [PSCustomObject]@{ 'Edition'=$os.Caption; 'Version'=$os.Version; 'InstallDate'=$os.InstallDate; 'Uptime'=$uptimeStr; 'TPM'=$tpm; 'SecureBoot'=$secBoot } ^| Format-Table -AutoSize >> "%ps_file%"
-
 :: 2. MOTHERBOARD
 echo Write-Host " [MOTHERBOARD & RAM]" -ForegroundColor Cyan >> "%ps_file%"
 echo $cs = Get-CimInstance Win32_ComputerSystem >> "%ps_file%"
@@ -300,28 +297,22 @@ echo $bb = Get-CimInstance Win32_BaseBoard >> "%ps_file%"
 echo $bios = Get-CimInstance Win32_BIOS >> "%ps_file%"
 echo $ram = "{0:N2} GB" -f ($cs.TotalPhysicalMemory / 1GB) >> "%ps_file%"
 echo [PSCustomObject]@{ 'Model'=$bb.Product; 'Vendor'=$bb.Manufacturer; 'BIOS'=$bios.SMBIOSBIOSVersion; 'Total RAM'=$ram } ^| Format-Table -AutoSize >> "%ps_file%"
-
 :: 3. CPU
 echo Write-Host " [CPU]" -ForegroundColor Cyan >> "%ps_file%"
 echo Get-CimInstance Win32_Processor ^| Select-Object @{N='Model';E={$_.Name}}, @{N='Cores';E={$_.NumberOfCores}}, @{N='Threads';E={$_.NumberOfLogicalProcessors}}, @{N='MHz';E={$_.MaxClockSpeed}} ^| Format-Table -AutoSize >> "%ps_file%"
-
 :: 4. GPU
 echo Write-Host " [GPU & DISPLAY]" -ForegroundColor Cyan >> "%ps_file%"
 echo $gpu = Get-CimInstance Win32_VideoController >> "%ps_file%"
 echo $gpu ^| Select-Object @{N='Model';E={$_.Name}}, @{N='Driver';E={$_.DriverVersion}}, @{N='VRAM';E={if($_.AdapterRAM){"{0:N2} GB" -f ($_.AdapterRAM/1GB)}else{"(System)"}}}, @{N='Mode';E={if($_.CurrentHorizontalResolution){"$($_.CurrentHorizontalResolution)x$($_.CurrentVerticalResolution) @ $($_.CurrentRefreshRate)Hz"}else{"N/A"}}} ^| Format-Table -AutoSize >> "%ps_file%"
-
 :: 5. STORAGE (PHYSICAL)
 echo Write-Host " [STORAGE DEVICES]" -ForegroundColor Cyan >> "%ps_file%"
 echo Get-PhysicalDisk ^| Select-Object @{N='Model';E={$_.FriendlyName}}, @{N='Type';E={$_.MediaType}}, @{N='Health';E={$_.HealthStatus}}, @{N='Size';E={"{0:N2} GB" -f ($_.Size/1GB)}} ^| Format-Table -AutoSize >> "%ps_file%"
-
 :: 6. LOGICAL DISKS
 echo Write-Host " [LOGICAL VOLUMES]" -ForegroundColor Cyan >> "%ps_file%"
 echo Get-CimInstance Win32_LogicalDisk ^| Where-Object DriveType -eq 3 ^| Select-Object @{N='Drive';E={$_.DeviceID}}, @{N='Label';E={$_.VolumeName}}, @{N='Total';E={"{0:N2} GB" -f ($_.Size/1GB)}}, @{N='Free';E={"{0:N2} GB" -f ($_.FreeSpace/1GB)}} ^| Format-Table -AutoSize >> "%ps_file%"
-
 :: 7. AUDIO
 echo Write-Host " [AUDIO DEVICES]" -ForegroundColor Cyan >> "%ps_file%"
 echo Get-CimInstance Win32_SoundDevice ^| Where-Object Status -eq 'OK' ^| Select-Object @{N='Name';E={$_.ProductName}}, @{N='Manufacturer';E={$_.Manufacturer}} ^| Format-Table -AutoSize >> "%ps_file%"
-
 :: 8. NETWORK
 echo Write-Host " [ACTIVE NETWORK]" -ForegroundColor Cyan >> "%ps_file%"
 echo Get-CimInstance Win32_NetworkAdapterConfiguration ^| Where-Object {$_.IPEnabled -eq $true} ^| Select-Object @{N='Adapter';E={$_.Description.Split('(')[0].Trim()}}, @{N='IP';E={$_.IPAddress[0]}}, @{N='MAC';E={$_.MACAddress}} ^| Format-Table -AutoSize >> "%ps_file%"
@@ -397,6 +388,7 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
 
