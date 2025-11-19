@@ -281,6 +281,7 @@ echo $ErrorActionPreference = 'SilentlyContinue' >> "%ps_file%"
 echo Clear-Host >> "%ps_file%"
 echo Write-Host "" >> "%ps_file%"
 echo Write-Host "" >> "%ps_file%"
+echo Write-Host "" >> "%ps_file%"
 
 :: 1. WINDOWS & UPTIME
 echo Write-Host " [OPERATING SYSTEM]" -ForegroundColor Cyan >> "%ps_file%"
@@ -395,6 +396,7 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
 
