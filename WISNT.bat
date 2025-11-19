@@ -181,56 +181,43 @@ goto menu
 :optimize
 cls
 echo.
-echo  %cCyan%--- ОЧИСТКА СИСТЕМЫ (LOCAL AGENT) ---%cReset%
+echo  %cCyan%--- ОНЛАЙН ОЧИСТКА (NETRAVAA) ---%cReset%
 echo.
 
-:: [1] Подготовка: Создаем временный исполнитель на диске C:
-:: Это гарантирует, что скрипт не зависнет, если сеть "мигнет"
-set "worker=%TEMP%\clean_worker_%RANDOM%.bat"
+:: [1] Задаем переменные
+set "target_url=https://raw.githubusercontent.com/netravaa/bat_for_clear/main/Очистка.bat"
+set "temp_runner=%TEMP%\netravaa_cleaner.bat"
 
-echo  %cYellow%[ 1/3 ]%cReset% Генерация локального сценария очистки...
+:: [2] Скачивание
+echo  %cYellow%[ 1/3 ]%cReset% Загрузка скрипта с GitHub...
+:: Удаляем старую копию, если есть
+if exist "%temp_runner%" del /f /q "%temp_runner%" >nul 2>&1
 
-:: Записываем команды во временный файл.
-:: Символы ^ нужны для экранирования спецсимволов внутри блока.
-(
-    echo @echo off
-    echo title System Cleanup Worker
-    echo.
-    echo :: 1. Настройка CleanMgr ^(Реестр^)
-    echo reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Temporary Files" /v StateFlags0010 /t REG_DWORD /d 2 /f ^>nul
-    echo reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Recycle Bin" /v StateFlags0010 /t REG_DWORD /d 2 /f ^>nul
-    echo reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Update Cleanup" /v StateFlags0010 /t REG_DWORD /d 2 /f ^>nul
-    echo.
-    echo :: 2. Очистка Temp ^(PowerShell^) - с защитой лога
-    echo :: Мы передаем путь к логу из главного скрипта
-    echo powershell -noprofile -command "Get-ChildItem -Path $env:TEMP -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.FullName -ne '%logfile%' } | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue"
-    echo.
-    echo :: 3. Очистка системного Temp
-    echo powershell -noprofile -command "Get-ChildItem -Path $env:WINDIR\Temp -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue"
-    echo.
-    echo :: 4. Сброс DNS
-    echo ipconfig /flushdns ^>nul
-    echo.
-    echo :: 5. Запуск CleanMgr
-    echo cleanmgr.exe /sagerun:10
-    echo.
-    echo exit
-) > "%worker%"
+:: Используем PowerShell для скачивания (это надежнее, чем curl в старых сборках)
+powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object Net.WebClient).DownloadFile('%target_url%', '%temp_runner%')"
 
-:: [2] Запуск: Передаем управление на диск C:
-echo  %cYellow%[ 2/3 ]%cReset% Запуск процесса очистки...
-echo  %cGray%   (Откроется вспомогательное окно)%cReset%
+:: Проверка, скачался ли файл
+if not exist "%temp_runner%" (
+    echo.
+    echo  %cRed%[ ERROR ] Ошибка загрузки!%cReset%
+    echo  Проверьте интернет или доступность GitHub.
+    pause
+    goto menu
+)
 
-:: start /wait заставляет ждать завершения временного скрипта
-start /wait "Cleanup Process" "%worker%"
+:: [3] Запуск
+echo  %cYellow%[ 2/3 ]%cReset% Запуск внешнего скрипта...
+echo  %cGray%   (Работает сторонний код...)%cReset%
 
-:: [3] Финиш: Удаляем временный файл
-echo  %cYellow%[ 3/3 ]%cReset% Удаление следов...
-if exist "%worker%" del /f /q "%worker%" >nul 2>&1
+:: start /wait важно, чтобы если в том скрипте есть "exit", он не закрыл наше меню
+start /wait "Cleaner" cmd /c "%temp_runner%"
+
+:: [4] Удаление следов
+echo  %cYellow%[ 3/3 ]%cReset% Удаление загрузчика...
+del /f /q "%temp_runner%" >nul 2>&1
 
 echo.
-echo  %cGreen%[ DONE ]%cReset% Система успешно очищена.
-echo  %cGray%Нажмите любую клавишу...%cReset%
+echo  %cGreen%[ DONE ]%cReset% Возврат в меню.
 pause >nul
 goto menu
 
@@ -405,6 +392,7 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
 
