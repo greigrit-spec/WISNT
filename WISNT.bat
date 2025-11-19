@@ -282,7 +282,8 @@ echo Clear-Host >> "%ps_file%"
 echo Write-Host "" >> "%ps_file%"
 
 :: 1. WINDOWS & UPTIME
-
+echo Write-Host " [OPERATING SYSTEM]" -ForegroundColor Cyan >> "%ps_file%"
+echo Write-Host " [OPERATING SYSTEM]" -ForegroundColor Cyan >> "%ps_file%"
 echo Write-Host " [OPERATING SYSTEM]" -ForegroundColor Cyan >> "%ps_file%"
 echo $os = Get-CimInstance Win32_OperatingSystem >> "%ps_file%"
 echo $uptime = (Get-Date) - $os.LastBootUpTime >> "%ps_file%"
@@ -388,6 +389,7 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
 
