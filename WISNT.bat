@@ -3,7 +3,7 @@
 :: ИНИЦИАЛИЗАЦИЯ И СТИЛИЗАЦИЯ
 :: ==============================================
 chcp 65001 >nul
-title Windows Ultimate Optimizer (Final Fix)
+title Windows Ultimate Optimizer 
 setlocal enabledelayedexpansion
 
 :: Настройка цветов ANSI
@@ -366,8 +366,10 @@ echo.
 set "zip_url=https://github.com/EXLOUD/Windows-Telemetry-Disabler/archive/refs/heads/main.zip"
 set "zip_file=%TEMP%\telemetry_disabler_repo_%RANDOM%.zip"
 set "extract_dir=%TEMP%\telemetry_disabler_extract_%RANDOM%"
+set "unpack_script=%TEMP%\unpack_script_%RANDOM%.bat"
 
 :: Скачивание ZIP-архива
+echo  %cYellow%[ DEBUG ]%cReset% Скачивание: %zip_url% -> %zip_file%
 powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object Net.WebClient).DownloadFile('%zip_url%', '%zip_file%')"
 
 :: Проверка, скачался ли файл
@@ -381,47 +383,53 @@ if not exist "%zip_file%" (
 
 echo  %cYellow%[ INFO ]%cReset% Архив успешно загружен.
 
-:: --- ИСПРАВЛЕНИЕ: Создаём временный .ps1 скрипт для распаковки ---
-set "ps_extract_script=%TEMP%\extract_script_%RANDOM%.ps1"
+:: --- ИСПРАВЛЕНИЕ: Создаём временный BAT-скрипт для распаковки ---
+echo  %cYellow%[ DEBUG ]%cReset% Создание скрипта распаковки: %unpack_script%
 
-:: Пишем команду в .ps1 файл
-echo Add-Type -AssemblyName 'System.IO.Compression.FileSystem' > "%ps_extract_script%"
-echo [System.IO.Compression.ZipFile]::ExtractToDirectory('%zip_file%', '%extract_dir%') >> "%ps_extract_script%"
+:: Пишем команды распаковки в .bat файл
+(
+echo @echo off
+echo.
+echo echo [DEBUG_UNPACK] Создание папки: %extract_dir%
+if not exist "%extract_dir%" echo mkdir "%extract_dir%"
+echo.
+echo echo [DEBUG_UNPACK] Проверка наличия tar.exe
+echo if not exist "%%SystemRoot%%\System32\tar.exe" ^(
+echo     echo [ERROR_UNPACK] tar.exe не найден
+echo     pause
+echo     exit /b 1
+echo ^)
+echo.
+echo echo [DEBUG_UNPACK] Распаковка в: %extract_dir%
+echo pushd "%extract_dir%"
+echo "%%SystemRoot%%\System32\tar.exe" -xf "%zip_file%"
+echo popd
+echo.
+echo echo [DEBUG_UNPACK] Завершение распаковки.
+) > "%unpack_script%"
 
 :: Проверка, создался ли файл скрипта
-if not exist "%ps_extract_script%" (
+if not exist "%unpack_script%" (
     echo  %cRed%[ ERROR ] Ошибка создания временного скрипта распаковки.%cReset%
     if exist "%zip_file%" del /f /q "%zip_file%" >nul 2>&1
     pause
     goto menu
 )
 
-echo  %cYellow%[ INFO ]%cReset% Распаковка архива (через временный .ps1)...
-:: Проверка наличия PowerShell
-if not defined PS_EXE (
-    for %%X in (powershell.exe) do (set "PS_EXE=%%~$PATH:X)
-)
-if not defined PS_EXE (
-    echo  %cRed%[ ERROR ] PowerShell не найден в PATH!%cReset%
-    if exist "%ps_extract_script%" del /f /q "%ps_extract_script%" >nul 2>&1
-    pause
-    goto menu
-)
-
-:: Запускаем созданный .ps1 скрипт
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%ps_extract_script%"
+echo  %cYellow%[ INFO ]%cReset% Запуск скрипта распаковки (через временный .bat)...
+call "%unpack_script%"
 
 if %errorlevel% neq 0 (
-    echo  %cRed%[ ERROR ] Ошибка распаковки архива PowerShell.%cReset%
+    echo  %cRed%[ ERROR ] Ошибка выполнения скрипта распаковки.%cReset%
     if exist "%zip_file%" del /f /q "%zip_file%" >nul 2>&1
-    if exist "%ps_extract_script%" del /f /q "%ps_extract_script%" >nul 2>&1
+    if exist "%unpack_script%" del /f /q "%unpack_script%" >nul 2>&1
     if exist "%extract_dir%" rmdir /s /q "%extract_dir%" >nul 2>&1
     pause
     goto menu
 )
 
-:: Удаляем временный .ps1 после использования
-if exist "%ps_extract_script%" del /f /q "%ps_extract_script%" >nul 2>&1
+:: Удаляем временный .bat после использования
+if exist "%unpack_script%" del /f /q "%unpack_script%" >nul 2>&1
 :: --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
 :: Проверка, создалась ли папка после распаковки
@@ -478,8 +486,8 @@ echo  %cGreen%[ DONE ]%cReset% Процесс отключения телеме�
 echo  %cGray%Нажмите любую клавишу для возврата в меню...%cReset%
 pause >nul
 goto menu
-
 :: ---
+
 
 :: ==============================================
 :: КОМАНДЫ ПИТАНИЯ И ССЫЛКИ
@@ -534,6 +542,7 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
 
