@@ -391,34 +391,22 @@ if not defined PS_EXE (
     goto menu
 )
 
-:: --- НАЧАЛО ИСПРАВЛЕНИЯ ---
-:: Используем временную .ps1 для выполнения команды Expand-Archive
-set "ps_extract_script=%TEMP%\extract_script_%RANDOM%.ps1"
-echo [System.IO.Compression.ZipFile]::ExtractToDirectory('%zip_file%', '%extract_dir%') > "%ps_extract_script%"
+:: --- ИСПРАВЛЕНИЕ ---
+:: Создаём директорию для распаковки
+if not exist "%extract_dir%" mkdir "%extract_dir%"
 
-:: Проверка, создался ли файл скрипта
-if not exist "%ps_extract_script%" (
-    echo  %cRed%[ ERROR ] Ошибка создания временного скрипта распаковки.%cReset%
-    if exist "%zip_file%" del /f /q "%zip_file%" >nul 2>&1
-    pause
-    goto menu
-)
-
+:: Теперь используем Expand-Archive с экранированными кавычками
 echo  %cYellow%[ INFO ]%cReset% Распаковка архива...
-:: Запускаем созданный скрипт
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%ps_extract_script%"
-
-:: Удаляем временный .ps1 после использования
-if exist "%ps_extract_script%" del /f /q "%ps_extract_script%" >nul 2>&1
-:: --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path ('%zip_file%') -DestinationPath ('%extract_dir%') -Force"
 
 :: Проверка, создалась ли папка после распаковки
 if not exist "%extract_dir%" (
-    echo  %cRed%[ ERROR ] Ошибка распаковки архива!%cReset%
+    echo  %cRed%[ ERROR ] Ошибка распаковки архива! Папка не создана.%cReset%
     if exist "%zip_file%" del /f /q "%zip_file%" >nul 2>&1
     pause
     goto menu
 )
+:: --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
 :: Определение реальной папки репозитория (обычно это Windows-Telemetry-Disabler-main)
 set "repo_dir="
