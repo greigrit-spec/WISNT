@@ -381,18 +381,35 @@ if not exist "%zip_file%" (
 
 echo  %cYellow%[ INFO ]%cReset% Архив успешно загружен.
 
-:: --- ИСПРАВЛЕНИЕ: Используем встроенный tar.exe для распаковки ---
-echo  %cYellow%[ INFO ]%cReset% Распаковка архива (используя tar.exe)...
+:: --- ИСПРАВЛЕНИЕ: Используем PowerShell Compress-Archive для распаковки ---
+:: Проверка наличия PowerShell для распаковки
+if not defined PS_EXE (
+    for %%X in (powershell.exe) do (set "PS_EXE=%%~$PATH:X)
+)
+if not defined PS_EXE (
+    echo  %cRed%[ ERROR ] PowerShell не найден в PATH!%cReset%
+    pause
+    goto menu
+)
+
+:: Создаём директорию для распаковки
 if not exist "%extract_dir%" mkdir "%extract_dir%"
 
-:: Переходим во временную папку, чтобы распаковать туда
-pushd "%extract_dir%"
+echo  %cYellow%[ INFO ]%cReset% Распаковка архива (используя PowerShell)...
 
-:: Запускаем tar.exe для распаковки ZIP-архива
-tar.exe -xf "%zip_file%"
+:: Используем Add-Type для загрузки .NET Assembly System.IO.Compression.FileSystem
+:: и вызова метода распаковки напрямую, чтобы избежать проблем с Expand-Archive
+"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command ^
+    Add-Type -AssemblyName 'System.IO.Compression.FileSystem'; ^
+    [System.IO.Compression.ZipFile]::ExtractToDirectory('%zip_file%', '%extract_dir%');
 
-:: Возвращаемся обратно
-popd
+if %errorlevel% neq 0 (
+    echo  %cRed%[ ERROR ] Ошибка распаковки архива PowerShell.%cReset%
+    if exist "%zip_file%" del /f /q "%zip_file%" >nul 2>&1
+    if exist "%extract_dir%" rmdir /s /q "%extract_dir%" >nul 2>&1
+    pause
+    goto menu
+)
 :: --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
 :: Проверка, создалась ли папка после распаковки
@@ -504,4 +521,5 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
