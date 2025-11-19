@@ -181,32 +181,32 @@ goto menu
 :optimize
 cls
 echo.
-echo  %cCyan%--- ОЧИСТКА СИСТЕМЫ ---%cReset%
+echo  %cCyan%--- ОЧИСТКА СИСТЕМЫ (УСИЛЕННАЯ) ---%cReset%
 echo.
-echo  %cYellow%[ 1/4 ]%cReset% Очистка Корзины и Недавних...
-:: Очистка Корзины (используется универсальный путь)
-rd /s /q "%SYSTEMDRIVE%\$Recycle.Bin" >nul 2>&1
-:: Очистка недавних документов
+
+:: 1. Очистка Недавних
+echo  %cYellow%[ 1/4 ]%cReset% Очистка Недавних документов...
 del /f /q "%USERPROFILE%\Recent\*.*" >nul 2>&1
-echo  %cGreen%[ OK ]%cReset%
+if not errorlevel 1 (echo  %cGreen%[ OK ]%cReset%) else (echo  %cRed%[ FAIL ]%cReset%)
 
-echo  %cYellow%[ 2/4 ]%cReset% Очистка временных файлов Windows...
-:: Очистка системной папки Temp
-del /f /s /q "%WINDIR%\Temp\*.*" >nul 2>&1
-:: Очистка пользовательской папки Temp (всегда корректно указывает на локальную папку пользователя)
+:: 2. Очистка временных файлов (USER TEMP)
+echo  %cYellow%[ 2/4 ]%cReset% Очистка пользовательской папки Temp...
 del /f /s /q "%TEMP%\*.*" >nul 2>&1
-echo  %cGreen%[ OK ]%cReset%
+if not errorlevel 1 (echo  %cGreen%[ OK ]%cReset%) else (echo  %cRed%[ FAIL ]%cReset%)
 
-echo  %cYellow%[ 3/4 ]%cReset% Очистка кеша обновлений и логов...
-:: Очистка кеша обновлений Windows
+:: 3. Очистка временных файлов (SYSTEM TEMP)
+echo  %cYellow%[ 3/4 ]%cReset% Очистка системной папки Temp и кеша обновлений...
+del /f /s /q "%WINDIR%\Temp\*.*" >nul 2>&1
 del /f /s /q "%WINDIR%\SoftwareDistribution\Download\*.*" >nul 2>&1
-:: Дополнительная очистка Logs из TEMP
-del /f /s /q "%TEMP%\*.log" >nul 2>&1
-echo  %cGreen%[ OK ]%cReset%
+if not errorlevel 1 (echo  %cGreen%[ OK ]%cReset%) else (echo  %cRed%[ FAIL ]%cReset%)
 
-echo  %cYellow%[ 4/4 ]%cReset% Запуск встроенной очистки диска...
+:: 4. Запуск встроенной очистки диска (Включает Корзину, Кеш)
+echo  %cYellow%[ 4/4 ]%cReset% Запуск встроенной очистки диска (cleanmgr)...
+:: Добавляем ключ реестра для автоматического включения всех опций очистки (включая Корзину)
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Temporary Files" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Recycle Bin" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul
 cleanmgr.exe /sagerun:10
-echo  %cGreen%[ OK ]%cReset%
+if not errorlevel 1 (echo  %cGreen%[ OK ]%cReset%) else (echo  %cRed%[ FAIL ]%cReset%)
 
 echo.
 echo  %cGreen%[ DONE ]%cReset% Полная очистка завершена.
@@ -384,3 +384,4 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
