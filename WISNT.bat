@@ -286,7 +286,7 @@ echo $uptime = (Get-Date) - $os.LastBootUpTime >> "%ps_file%"
 echo $uptimeStr = "{0}d {1}h {2}m" -f $uptime.Days, $uptime.Hours, $uptime.Minutes >> "%ps_file%"
 echo $secBoot = try { if (Confirm-SecureBootUEFI) {'Enabled'} else {'Disabled'} } catch {'Legacy/Unknown'} >> "%ps_file%"
 echo $tpm = try { $t = Get-Tpm; if($t.TpmPresent){'v2.0'}else{'None'} } catch {'Unknown'} >> "%ps_file%"
-echo [PSCustomObject]@{ 'Edition'=$os.Caption; 'Version'=$os.Version; 'InstallDate'=$os.InstallDate; 'Uptime'=$uptimeStr; 'TPM'=$tpm } ^| Format-Table -AutoSize >> "%ps_file%"
+echo [PSCustomObject]@{ 'Edition'=$os.Caption; 'Version'=$os.Version; 'InstallDate'=$os.InstallDate; 'Uptime'=$uptimeStr; 'TPM'=$tpm; 'SecureBoot'=$secBoot } ^| Format-Table -AutoSize >> "%ps_file%"
 
 :: 2. MOTHERBOARD
 echo Write-Host " [MOTHERBOARD & RAM]" -ForegroundColor Cyan >> "%ps_file%"
@@ -397,6 +397,7 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
 
