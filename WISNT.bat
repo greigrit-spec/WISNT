@@ -181,69 +181,49 @@ goto menu
 :optimize
 cls
 echo.
-echo  %cCyan%--- УНИВЕРСАЛЬНАЯ ОЧИСТКА (FINAL FIX) ---%cReset%
+echo  %cCyan%--- БЕЗОПАСНАЯ ОЧИСТКА (NETWORK SAFE) ---%cReset%
 echo.
 
-:: [1] Фиксация рабочей директории (защита для сетевого запуска)
+:: [1] Фиксация рабочей директории
 pushd "%~dp0"
 
-:: [2] Безопасная остановка служб (Anti-Crash)
-echo  %cYellow%[ 1/5 ]%cReset% Остановка служб (Update, Spooler)...
-:: Используем SC и CMD /C, чтобы не ждать ответа и не вешать скрипт
-cmd /c "sc stop wuauserv >nul 2>&1"
-cmd /c "sc stop UsoSvc >nul 2>&1"
-
-:: ВАЖНО: Останавливаем BITS только если мы на диске C: (локально).
-:: Если запустить это на сетевом диске — связь разорвется и скрипт упадет.
-if /i "%~d0"=="C:" (
-    cmd /c "sc stop bits >nul 2>&1"
-)
-:: Короткая пауза для стабилизации, но не зависаем
-timeout /t 2 /nobreak >nul
-
-:: [3] Умная очистка TEMP (PowerShell с исключением ЛОГА)
-echo  %cYellow%[ 2/5 ]%cReset% Очистка временных файлов пользователя...
-:: Удаляем все в Temp, КРОМЕ файла, путь к которому лежит в %logfile%
-powershell -noprofile -command "Get-ChildItem -Path $env:TEMP -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.FullName -ne '%logfile%' } | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue"
-echo  %cGreen%[ OK ]%cReset%
-
-:: [4] Очистка Системного TEMP и Кеша обновлений
-echo  %cYellow%[ 3/5 ]%cReset% Очистка системного мусора...
-:: Чистим Windows\Temp
-del /f /s /q "%WINDIR%\Temp\*.*" >nul 2>&1
-:: Чистим папку скачанных обновлений (если она есть)
-if exist "%WINDIR%\SoftwareDistribution\Download" (
-    del /f /s /q "%WINDIR%\SoftwareDistribution\Download\*.*" >nul 2>&1
-)
-echo  %cGreen%[ OK ]%cReset%
-
-:: [5] Очистка Корзины и DNS
-echo  %cYellow%[ 4/5 ]%cReset% Сброс DNS и Корзины...
-ipconfig /flushdns >nul 2>&1
-:: Безопасная очистка корзины через PowerShell
-powershell -command "Clear-RecycleBin -Force -ErrorAction SilentlyContinue" >nul 2>&1
-echo  %cGreen%[ OK ]%cReset%
-
-:: [6] Запуск CleanMgr (Автоматический режим)
-echo  %cYellow%[ 5/5 ]%cReset% Глубокая очистка диска (CleanMgr)...
-:: Прописываем настройки в реестр, чтобы CleanMgr знал, что чистить
+:: [2] Настройка CleanMgr (Пусть Windows сама разбирается со службами)
+echo  %cYellow%[ 1/3 ]%cReset% Настройка параметров очистки...
 set "KEY=HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches"
+
+:: Включаем галочки в реестре
 reg add "%KEY%\Temporary Files" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul 2>&1
 reg add "%KEY%\Recycle Bin" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul 2>&1
 reg add "%KEY%\Update Cleanup" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul 2>&1
-:: Запускаем и ждем завершения (start /wait)
+reg add "%KEY%\Delivery Optimization Files" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul 2>&1
+echo  %cGreen%[ OK ]%cReset%
+
+:: [3] Очистка пользовательского мусора (PowerShell - Safe Mode)
+echo  %cYellow%[ 2/3 ]%cReset% Очистка временных файлов...
+
+:: Чистим пользовательский Temp, пропуская занятые файлы и лог
+powershell -noprofile -command "Get-ChildItem -Path $env:TEMP -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.FullName -ne '%logfile%' } | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue"
+
+:: Чистим системный Temp (без фанатизма, только то, что удаляется)
+powershell -noprofile -command "Get-ChildItem -Path $env:WINDIR\Temp -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue"
+
+:: Очистка DNS
+ipconfig /flushdns >nul 2>&1
+echo  %cGreen%[ OK ]%cReset%
+
+:: [4] Запуск системной очистки (CleanMgr)
+echo  %cYellow%[ 3/3 ]%cReset% Глубокая очистка (CleanMgr)...
+echo  %cGray%Это может занять время. Пожалуйста, ждите...%cReset%
+
+:: Запускаем CleanMgr и ЖДЕМ его завершения. Он сам почистит обновления.
 start "" /wait cleanmgr.exe /sagerun:10
 echo  %cGreen%[ OK ]%cReset%
 
-:: [7] Восстановление служб (запускаем обратно)
-cmd /c "sc start wuauserv >nul 2>&1"
-cmd /c "sc start UsoSvc >nul 2>&1"
-
-:: Возврат контекста и выход
+:: Возврат контекста
 popd
 
 echo.
-echo  %cGreen%[ DONE ]%cReset% Очистка успешно завершена.
+echo  %cGreen%[ DONE ]%cReset% Система очищена.
 echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 goto menu
@@ -419,6 +399,7 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
 
