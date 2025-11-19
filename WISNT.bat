@@ -181,36 +181,61 @@ goto menu
 :optimize
 cls
 echo.
-echo  %cCyan%--- ОЧИСТКА СИСТЕМЫ (УСИЛЕННАЯ) ---%cReset%
+echo  %cCyan%--- ПРОФЕССИОНАЛЬНАЯ ОЧИСТКА ---%cReset%
 echo.
 
-:: 1. Очистка Недавних
-echo  %cYellow%[ 1/4 ]%cReset% Очистка Недавних документов...
-del /f /q "%USERPROFILE%\Recent\*.*" >nul 2>&1
-if not errorlevel 1 (echo  %cGreen%[ OK ]%cReset%) else (echo  %cRed%[ FAIL ]%cReset%)
+:: [1] Фиксация рабочей директории (для запуска по сети)
+pushd "%~dp0"
 
-:: 2. Очистка временных файлов (USER TEMP)
-echo  %cYellow%[ 2/4 ]%cReset% Очистка пользовательской папки Temp...
-del /f /s /q "%TEMP%\*.*" >nul 2>&1
-if not errorlevel 1 (echo  %cGreen%[ OK ]%cReset%) else (echo  %cRed%[ FAIL ]%cReset%)
+:: [2] Остановка служб, блокирующих файлы
+echo  %cYellow%[ 1/5 ]%cReset% Остановка служб (Update, Spooler)...
+net stop wuauserv >nul 2>&1
+net stop UsoSvc >nul 2>&1
+net stop bits >nul 2>&1
 
-:: 3. Очистка временных файлов (SYSTEM TEMP)
-echo  %cYellow%[ 3/4 ]%cReset% Очистка системной папки Temp и кеша обновлений...
+:: [3] Очистка Пользовательского TEMP (С ЗАЩИТОЙ ЛОГА)
+echo  %cYellow%[ 2/5 ]%cReset% Очистка временных файлов пользователя...
+:: Мы используем PowerShell, чтобы удалить всё, КРОМЕ текущего лог-файла
+powershell -noprofile -command "Get-ChildItem -Path $env:TEMP -Recurse -Force -ErrorAction SilentlyContinue | Where-Object { $_.FullName -ne '%logfile%' } | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue"
+if not errorlevel 1 (echo  %cGreen%[ OK ]%cReset%) else (echo  %cRed%[ SKIP ]%cReset%)
+
+:: [4] Очистка Системного TEMP и SoftwareDistribution
+echo  %cYellow%[ 3/5 ]%cReset% Очистка системного мусора...
 del /f /s /q "%WINDIR%\Temp\*.*" >nul 2>&1
-del /f /s /q "%WINDIR%\SoftwareDistribution\Download\*.*" >nul 2>&1
-if not errorlevel 1 (echo  %cGreen%[ OK ]%cReset%) else (echo  %cRed%[ FAIL ]%cReset%)
+if exist "%WINDIR%\SoftwareDistribution\Download" (
+    del /f /s /q "%WINDIR%\SoftwareDistribution\Download\*.*" >nul 2>&1
+)
+echo  %cGreen%[ OK ]%cReset%
 
-:: 4. Запуск встроенной очистки диска (Включает Корзину, Кеш)
-echo  %cYellow%[ 4/4 ]%cReset% Запуск встроенной очистки диска (cleanmgr)...
-:: Добавляем ключ реестра для автоматического включения всех опций очистки (включая Корзину)
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Temporary Files" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\Recycle Bin" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul
-cleanmgr.exe /sagerun:10
-if not errorlevel 1 (echo  %cGreen%[ OK ]%cReset%) else (echo  %cRed%[ FAIL ]%cReset%)
+:: [5] Очистка кэшей DNS и Корзины
+echo  %cYellow%[ 4/5 ]%cReset% Сброс сети и корзины...
+ipconfig /flushdns >nul 2>&1
+:: Безопасная очистка корзины через PowerShell (работает стабильнее rd /s)
+powershell -command "Clear-RecycleBin -Force -ErrorAction SilentlyContinue" >nul 2>&1
+echo  %cGreen%[ OK ]%cReset%
+
+:: [6] Запуск CleanMgr (автоматический режим)
+echo  %cYellow%[ 5/5 ]%cReset% Глубокая очистка диска (CleanMgr)...
+:: Добавляем ключи реестра для "тихого" запуска со всеми галочками
+set "KEY=HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches"
+reg add "%KEY%\Temporary Files" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul 2>&1
+reg add "%KEY%\Recycle Bin" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul 2>&1
+reg add "%KEY%\Update Cleanup" /v StateFlags0010 /t REG_DWORD /d 2 /f >nul 2>&1
+:: Запуск
+start "" /wait cleanmgr.exe /sagerun:10
+echo  %cGreen%[ OK ]%cReset%
+
+:: [7] Перезапуск служб
+net start wuauserv >nul 2>&1
+net start UsoSvc >nul 2>&1
+
+:: Возврат контекста
+popd
 
 echo.
-echo  %cGreen%[ DONE ]%cReset% Полная очистка завершена.
-timeout /t 2 >nul
+echo  %cGreen%[ DONE ]%cReset% Очистка успешно завершена.
+echo  %cGray%Нажмите любую клавишу...%cReset%
+pause >nul
 goto menu
 
 :reset_network
@@ -384,4 +409,5 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
