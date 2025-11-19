@@ -457,20 +457,26 @@ if not defined repo_dir (
 :: Путь к Launcher.bat внутри распакованного репозитория
 set "launcher_path=%repo_dir%\launcher.bat"
 
-:: Проверка, существует ли Launcher.bat
+:: --- НОВОЕ ИСПРАВЛЕНИЕ: Проверка и отладка пути ---
+echo  %cYellow%[ DEBUG ]%cReset% Путь к launcher.bat: %launcher_path%
 if not exist "%launcher_path%" (
-    echo  %cRed%[ ERROR ] Launcher.bat не найден в распакованном архиве!%cReset%
+    echo  %cRed%[ ERROR ] Launcher.bat не найден по указанному пути!%cReset%
+    echo  %cRed%[ ERROR ] Проверьте содержимое папки: %repo_dir%%cReset%
+    dir "%repo_dir%" /b
     if exist "%zip_file%" del /f /q "%zip_file%" >nul 2>&1
     if exist "%extract_dir%" rmdir /s /q "%extract_dir%" >nul 2>&1
     pause
     goto menu
 )
+:: --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
 echo  %cYellow%[ INFO ]%cReset% Запуск Launcher.bat через TrustedInstaller (superUser)...
 echo  %cGray%Это может занять некоторое время...%cReset%
 echo.
-:: Запуск Launcher.bat из распакованной папки
-call "%launcher_path%"
+:: --- ИСПРАВЛЕНИЕ: Используем start /wait для запуска ---
+:: Это может быть более устойчивым к проблемам с синтаксисом, чем call
+start /wait "" cmd /c ""%launcher_path%""
+:: --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
 :: Удаление временных файлов после выполнения
 echo  %cYellow%[ INFO ]%cReset% Очистка временных файлов...
@@ -542,6 +548,7 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
 
