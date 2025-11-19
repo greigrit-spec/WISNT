@@ -352,7 +352,7 @@ pause >nul
 mode con cols=120 lines=62 >nul 2>&1
 goto menu
 
-:: --- ОБНОВЛЁННАЯ ФУНКЦИЯ ---
+:: --- ИСПРАВЛЁННАЯ ФУНКЦИЯ ---
 :disable_telemetry
 cls
 echo.
@@ -391,9 +391,26 @@ if not defined PS_EXE (
     goto menu
 )
 
-:: Распаковка ZIP-архива во временный каталог
+:: --- НАЧАЛО ИСПРАВЛЕНИЯ ---
+:: Используем временную .ps1 для выполнения команды Expand-Archive
+set "ps_extract_script=%TEMP%\extract_script_%RANDOM%.ps1"
+echo [System.IO.Compression.ZipFile]::ExtractToDirectory('%zip_file%', '%extract_dir%') > "%ps_extract_script%"
+
+:: Проверка, создался ли файл скрипта
+if not exist "%ps_extract_script%" (
+    echo  %cRed%[ ERROR ] Ошибка создания временного скрипта распаковки.%cReset%
+    if exist "%zip_file%" del /f /q "%zip_file%" >nul 2>&1
+    pause
+    goto menu
+)
+
 echo  %cYellow%[ INFO ]%cReset% Распаковка архива...
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path '%zip_file%' -DestinationPath '%extract_dir%' -Force"
+:: Запускаем созданный скрипт
+"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%ps_extract_script%"
+
+:: Удаляем временный .ps1 после использования
+if exist "%ps_extract_script%" del /f /q "%ps_extract_script%" >nul 2>&1
+:: --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
 :: Проверка, создалась ли папка после распаковки
 if not exist "%extract_dir%" (
