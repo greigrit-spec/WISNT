@@ -381,35 +381,47 @@ if not exist "%zip_file%" (
 
 echo  %cYellow%[ INFO ]%cReset% Архив успешно загружен.
 
-:: --- ИСПРАВЛЕНИЕ: Используем PowerShell Compress-Archive для распаковки ---
-:: Проверка наличия PowerShell для распаковки
+:: --- ИСПРАВЛЕНИЕ: Создаём временный .ps1 скрипт для распаковки ---
+set "ps_extract_script=%TEMP%\extract_script_%RANDOM%.ps1"
+
+:: Пишем команду в .ps1 файл
+echo Add-Type -AssemblyName 'System.IO.Compression.FileSystem' > "%ps_extract_script%"
+echo [System.IO.Compression.ZipFile]::ExtractToDirectory('%zip_file%', '%extract_dir%') >> "%ps_extract_script%"
+
+:: Проверка, создался ли файл скрипта
+if not exist "%ps_extract_script%" (
+    echo  %cRed%[ ERROR ] Ошибка создания временного скрипта распаковки.%cReset%
+    if exist "%zip_file%" del /f /q "%zip_file%" >nul 2>&1
+    pause
+    goto menu
+)
+
+echo  %cYellow%[ INFO ]%cReset% Распаковка архива (через временный .ps1)...
+:: Проверка наличия PowerShell
 if not defined PS_EXE (
     for %%X in (powershell.exe) do (set "PS_EXE=%%~$PATH:X)
 )
 if not defined PS_EXE (
     echo  %cRed%[ ERROR ] PowerShell не найден в PATH!%cReset%
+    if exist "%ps_extract_script%" del /f /q "%ps_extract_script%" >nul 2>&1
     pause
     goto menu
 )
 
-:: Создаём директорию для распаковки
-if not exist "%extract_dir%" mkdir "%extract_dir%"
-
-echo  %cYellow%[ INFO ]%cReset% Распаковка архива (используя PowerShell)...
-
-:: Используем Add-Type для загрузки .NET Assembly System.IO.Compression.FileSystem
-:: и вызова метода распаковки напрямую, чтобы избежать проблем с Expand-Archive
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -Command ^
-    Add-Type -AssemblyName 'System.IO.Compression.FileSystem'; ^
-    [System.IO.Compression.ZipFile]::ExtractToDirectory('%zip_file%', '%extract_dir%');
+:: Запускаем созданный .ps1 скрипт
+"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%ps_extract_script%"
 
 if %errorlevel% neq 0 (
     echo  %cRed%[ ERROR ] Ошибка распаковки архива PowerShell.%cReset%
     if exist "%zip_file%" del /f /q "%zip_file%" >nul 2>&1
+    if exist "%ps_extract_script%" del /f /q "%ps_extract_script%" >nul 2>&1
     if exist "%extract_dir%" rmdir /s /q "%extract_dir%" >nul 2>&1
     pause
     goto menu
 )
+
+:: Удаляем временный .ps1 после использования
+if exist "%ps_extract_script%" del /f /q "%ps_extract_script%" >nul 2>&1
 :: --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
 :: Проверка, создалась ли папка после распаковки
@@ -466,6 +478,7 @@ echo  %cGreen%[ DONE ]%cReset% Процесс отключения телеме�
 echo  %cGray%Нажмите любую клавишу для возврата в меню...%cReset%
 pause >nul
 goto menu
+
 :: ---
 
 :: ==============================================
@@ -521,5 +534,6 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
