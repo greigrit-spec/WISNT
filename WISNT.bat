@@ -183,47 +183,75 @@ goto menu
 start "" "SystemPropertiesAdvanced.exe"
 goto menu
 
-:optimize
+:: ==============================================
+:: [14] СВОДКА О ЖЕЛЕЗЕ — ФИНАЛЬНАЯ ВЕРСИЯ (БЕЗ ОШИБОК)
+:: ==============================================
+:sys_info_safe
 cls
-echo.
-echo  %cCyan%--- ОНЛАЙН ОЧИСТКА (NETRAVAA) ---%cReset%
-echo.
 
-:: [1] Задаем переменные
-set "target_url=https://raw.githubusercontent.com/greigrit-spec/WISNT/main/Очистка.bat"
-set "temp_runner=%TEMP%\netravaa_cleaner.bat"
+set "ps_file=%TEMP%\sys_info_gen.ps1"
+if exist "%ps_file%" del "%ps_file%"
 
-:: [2] Скачивание
-echo  %cYellow%[ 1/3 ]%cReset% Загрузка скрипта с GitHub...
-:: Удаляем старую копию, если есть
-if exist "%temp_runner%" del /f /q "%temp_runner%" >nul 2>&1
-
-:: Используем PowerShell для скачивания (это надежнее, чем curl в старых сборках)
-powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointProtocol]::Tls12; (New-Object Net.WebClient).DownloadFile('%target_url%', '%temp_runner%')"
-
-:: Проверка, скачался ли файл
-if not exist "%temp_runner%" (
-    echo.
-    echo  %cRed%[ ERROR ] Ошибка загрузки!%cReset%
-    echo  Проверьте интернет или доступность GitHub.
-    pause
-    goto menu
+:: --- ГЕНЕРАЦИЯ ВАЛИДНОГО PowerShell-СКРИПТА ---
+> "%ps_file%" (
+    echo $ProgressPreference = 'SilentlyContinue'
+    echo $ErrorActionPreference = 'SilentlyContinue'
+    echo.
+    echo Write-Host ""
+    echo Write-Host " [ BUSY ] Загрузка данных (SSD, TPM, System)..." -ForegroundColor Yellow
+    echo Write-Host " Пожалуйста, подождите..." -ForegroundColor Gray
+    echo Write-Host ""
+    echo Write-Host ""
+    echo Write-Host ""
+    echo.
+    echo Write-Host " [OPERATING SYSTEM]" -ForegroundColor Cyan
+    echo $os = Get-CimInstance Win32_OperatingSystem
+    echo $uptime = (Get-Date) - $os.LastBootUpTime
+    echo $uptimeStr = "{0}d {1}h {2}m" -f $uptime.Days, $uptime.Hours, $uptime.Minutes
+    echo $secBoot = try { if (Confirm-SecureBootUEFI) {'Enabled'} else {'Disabled'} } catch {'Legacy/Unknown'}
+    echo $tpm = try { $t = Get-Tpm; if($t.TpmPresent){'v2.0'}else{'None'} } catch {'Unknown'}
+    echo [PSCustomObject]@{ 'Edition'=$os.Caption; 'Version'=$os.Version; 'InstallDate'=$os.InstallDate; 'Uptime'=$uptimeStr; 'TPM'=$tpm; 'SecureBoot'=$secBoot } ^| Format-Table -AutoSize
+    echo.
+    echo Write-Host " [MOTHERBOARD & RAM]" -ForegroundColor Cyan
+    echo $cs = Get-CimInstance Win32_ComputerSystem
+    echo $bb = Get-CimInstance Win32_BaseBoard
+    echo $bios = Get-CimInstance Win32_BIOS
+    echo $ram = "{0:N2} GB" -f ($cs.TotalPhysicalMemory / 1GB)
+    echo [PSCustomObject]@{ 'Model'=$bb.Product; 'Vendor'=$bb.Manufacturer; 'BIOS'=$bios.SMBIOSBIOSVersion; 'Total RAM'=$ram } ^| Format-Table -AutoSize
+    echo.
+    echo Write-Host " [CPU]" -ForegroundColor Cyan
+    echo Get-CimInstance Win32_Processor ^| Select-Object @{N='Model';E={$_.Name}}, @{N='Cores';E={$_.NumberOfCores}}, @{N='Threads';E={$_.NumberOfLogicalProcessors}}, @{N='MHz';E={$_.MaxClockSpeed}} ^| Format-Table -AutoSize
+    echo.
+    echo Write-Host " [GPU & DISPLAY]" -ForegroundColor Cyan
+    echo $gpu = Get-CimInstance Win32_VideoController
+    echo $gpu ^| Select-Object @{N='Model';E={$_.Name}}, @{N='Driver';E={$_.DriverVersion}}, @{N='VRAM';E={if($_.AdapterRAM){"{0:N2} GB" -f ($_.AdapterRAM/1GB)}else{"(System)"}}}, @{N='Mode';E={if($_.CurrentHorizontalResolution){"$($_.CurrentHorizontalResolution)x$($_.CurrentVerticalResolution) @ $($_.CurrentRefreshRate)Hz"}else{"N/A"}}} ^| Format-Table -AutoSize
+    echo.
+    echo Write-Host " [STORAGE DEVICES]" -ForegroundColor Cyan
+    echo Get-PhysicalDisk ^| Select-Object @{N='Model';E={$_.FriendlyName}}, @{N='Type';E={$_.MediaType}}, @{N='Health';E={$_.HealthStatus}}, @{N='Size';E={"{0:N2} GB" -f ($_.Size/1GB)}} ^| Format-Table -AutoSize
+    echo.
+    echo Write-Host " [LOGICAL VOLUMES]" -ForegroundColor Cyan
+    echo Get-CimInstance Win32_LogicalDisk ^| Where-Object DriveType -eq 3 ^| Select-Object @{N='Drive';E={$_.DeviceID}}, @{N='Label';E={$_.VolumeName}}, @{N='Total';E={"{0:N2} GB" -f ($_.Size/1GB)}}, @{N='Free';E={"{0:N2} GB" -f ($_.FreeSpace/1GB)}} ^| Format-Table -AutoSize
+    echo.
+    echo Write-Host " [AUDIO DEVICES]" -ForegroundColor Cyan
+    echo Get-CimInstance Win32_SoundDevice ^| Where-Object Status -eq 'OK' ^| Select-Object @{N='Name';E={$_.ProductName}}, @{N='Manufacturer';E={$_.Manufacturer}} ^| Format-Table -AutoSize
+    echo.
+    echo Write-Host " [ACTIVE NETWORK]" -ForegroundColor Cyan
+    echo Get-CimInstance Win32_NetworkAdapterConfiguration ^| Where-Object {$_.IPEnabled -eq $true} ^| Select-Object @{N='Adapter';E={$_.Description.Split('(')[0].Trim()}}, @{N='IP';E={$_.IPAddress[0]}}, @{N='MAC';E={$_.MACAddress}} ^| Format-Table -AutoSize
 )
 
-:: [3] Запуск
-echo  %cYellow%[ 2/3 ]%cReset% Запуск внешнего скрипта...
-echo  %cGray%   (Работает сторонний код...)%cReset%
+:: ЗАПУСК PowerShell-СКРИПТА
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ps_file%"
 
-:: start /wait важно, чтобы если в том скрипте есть "exit", он не закрыл наше меню
-start /wait "Cleaner" cmd /c "%temp_runner%"
-
-:: [4] Удаление следов
-echo  %cYellow%[ 3/3 ]%cReset% Удаление загрузчика...
-del /f /q "%temp_runner%" >nul 2>&1
+:: ОЧИСТКА
+del "%ps_file%" >nul 2>&1
 
 echo.
-echo  %cGreen%[ DONE ]%cReset% Возврат в меню.
+echo  %cCyan%===========================================================================%cReset%
+echo  %cGray%Нажмите любую клавишу, чтобы вернуться в меню...%cReset%
 pause >nul
+
+:: ВОССТАНОВЛЕНИЕ РАЗМЕРА ОКНА
+mode con cols=120 lines=62 >nul 2>&1
 goto menu
 
 :reset_network
@@ -548,6 +576,7 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
 
