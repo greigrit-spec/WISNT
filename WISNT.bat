@@ -190,7 +190,7 @@ echo  %cCyan%--- ОНЛАЙН ОЧИСТКА (NETRAVAA) ---%cReset%
 echo.
 
 :: [1] Задаем переменные
-set "target_url=https://raw.githubusercontent.com/netravaa/bat_for_clear/main/  Очистка.bat"
+set "target_url=https://raw.githubusercontent.com/netravaa/bat_for_clear/main/Очистка.bat"
 set "temp_runner=%TEMP%\netravaa_cleaner.bat"
 
 :: [2] Скачивание
@@ -548,6 +548,7 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
 
