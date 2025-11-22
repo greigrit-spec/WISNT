@@ -186,43 +186,43 @@ goto menu
 :optimize
 cls
 echo.
-echo  %cCyan%--- ОНЛАЙН ОЧИСТКА (NETRAVAA) ---%cReset%
+echo  %cCyan%--- ОНЛАЙН ОЧИСТКА (NETRAVAA) ---%cReset%
 echo.
 
 :: [1] Задаем переменные
-set "target_url=https://raw.githubusercontent.com/greigrit-spec/WISNT/refs/heads/main/очистка.bat"
+set "target_url=https://raw.githubusercontent.com/greigrit-spec/WISNT/main/Очистка.bat"
 set "temp_runner=%TEMP%\netravaa_cleaner.bat"
 
 :: [2] Скачивание
-echo  %cYellow%[ 1/3 ]%cReset% Загрузка скрипта с GitHub...
+echo  %cYellow%[ 1/3 ]%cReset% Загрузка скрипта с GitHub...
 :: Удаляем старую копию, если есть
 if exist "%temp_runner%" del /f /q "%temp_runner%" >nul 2>&1
 
 :: Используем PowerShell для скачивания (это надежнее, чем curl в старых сборках)
-powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object Net.WebClient).DownloadFile('%target_url%', '%temp_runner%')"
+powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointProtocol]::Tls12; (New-Object Net.WebClient).DownloadFile('%target_url%', '%temp_runner%')"
 
 :: Проверка, скачался ли файл
 if not exist "%temp_runner%" (
-    echo.
-    echo  %cRed%[ ERROR ] Ошибка загрузки!%cReset%
-    echo  Проверьте интернет или доступность GitHub.
-    pause
-    goto menu
+    echo.
+    echo  %cRed%[ ERROR ] Ошибка загрузки!%cReset%
+    echo  Проверьте интернет или доступность GitHub.
+    pause
+    goto menu
 )
 
 :: [3] Запуск
-echo  %cYellow%[ 2/3 ]%cReset% Запуск внешнего скрипта...
-echo  %cGray%   (Работает сторонний код...)%cReset%
+echo  %cYellow%[ 2/3 ]%cReset% Запуск внешнего скрипта...
+echo  %cGray%   (Работает сторонний код...)%cReset%
 
 :: start /wait важно, чтобы если в том скрипте есть "exit", он не закрыл наше меню
 start /wait "Cleaner" cmd /c "%temp_runner%"
 
 :: [4] Удаление следов
-echo  %cYellow%[ 3/3 ]%cReset% Удаление загрузчика...
+echo  %cYellow%[ 3/3 ]%cReset% Удаление загрузчика...
 del /f /q "%temp_runner%" >nul 2>&1
 
 echo.
-echo  %cGreen%[ DONE ]%cReset% Возврат в меню.
+echo  %cGreen%[ DONE ]%cReset% Возврат в меню.
 pause >nul
 goto menu
 
@@ -548,6 +548,7 @@ echo  %cGray%Нажмите любую клавишу...%cReset%
 pause >nul
 
 goto menu
+
 
 
 
